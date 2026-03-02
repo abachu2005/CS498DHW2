@@ -1,0 +1,48 @@
+Part IV-A: Latency Measurements
+=================================
+
+--- us-central1 ---
+/register average latency: 218.82 ms
+  Individual: 242.27, 165.63, 328.78, 308.80, 195.20, 171.50, 217.26, 189.67, 158.80, 210.32 ms
+/list     average latency: 147.87 ms
+  Individual: 141.40, 164.09, 226.99, 141.50, 110.89, 170.46, 119.48, 118.66, 112.71, 172.51 ms
+
+--- europe-west1 ---
+/register average latency: 504.63 ms
+  Individual: 684.96, 433.49, 509.35, 379.25, 541.10, 384.68, 734.56, 442.73, 522.06, 414.10 ms
+/list     average latency: 482.53 ms
+  Individual: 669.79, 355.50, 655.19, 382.30, 552.53, 385.62, 510.69, 358.08, 550.46, 405.10 ms
+
+
+Part IV-B: Eventual Consistency Results
+=========================================
+
+Total iterations:         100
+Times username NOT found: 0
+Times username found:     100
+Inconsistency rate:       0.0%
+
+
+Discussion
+==========
+
+The latency measurements show a clear difference between the two regions. The
+us-central1 instance averaged ~219 ms for /register and ~148 ms for /list, while
+the europe-west1 instance averaged ~505 ms and ~483 ms respectively. This
+disparity arises from two compounding factors: first, the client running the
+script is located in the US, so network round-trip time to the European instance
+is inherently higher; second, the Firestore database is hosted in us-central1,
+meaning every Datastore read/write from the europe-west1 instance must cross the
+Atlantic to reach the database, adding significant latency on top of the client-
+to-server round trip.
+
+The eventual consistency experiment yielded 0 out of 100 misses, meaning the
+newly registered username was always found when querying the other instance
+immediately after registration. This may seem surprising for an eventually
+consistent system, but it is explained by the fact that both instances connect to
+the same single Firestore database in us-central1 rather than separate regional
+replicas. There is no cross-region replication lag because both instances query
+the same backend. The total round-trip time for the register call (~200-500 ms)
+plus the subsequent list call (~150-500 ms) provides enough time for the write
+to be fully committed before the read executes. In a scenario with true
+multi-region replicas, one would expect a nonzero inconsistency rate.

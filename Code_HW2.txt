@@ -1,0 +1,27 @@
+Part IV Implementation Description
+===================================
+
+Two Python scripts were written to analyze the deployed service:
+
+A. Latency Measurement (client/latency_test.py)
+-------------------------------------------------
+This script takes the base URLs of both instances as command-line arguments.
+For each instance it:
+  1. Clears any existing users via POST /clear.
+  2. Sends 10 POST requests to /register with unique usernames, timing each
+     request with Python's time.time() around the requests.post() call.
+  3. Sends 10 GET requests to /list, timing each similarly.
+  4. Computes the average latency for /register and /list on that instance.
+  5. Prints per-request and average latencies in milliseconds.
+
+B. Eventual Consistency Test (client/eventual_consistency_test.py)
+-------------------------------------------------------------------
+This script takes the base URLs of both instances as command-line arguments.
+It clears the database, then runs a loop of 100 iterations. In each iteration:
+  1. A unique username is generated using a counter and the current timestamp.
+  2. A POST request is sent to /register on Instance A (us-central1).
+  3. Immediately after, a GET request is sent to /list on Instance B (europe-west1).
+  4. The script checks whether the newly registered username appears in the
+     returned list.
+The script counts and reports how many times the username was NOT found,
+demonstrating the replication lag of eventual consistency.
